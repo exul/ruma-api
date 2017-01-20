@@ -12,8 +12,6 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! # #![feature(proc_macro)]
-//! #
 //! # extern crate ruma_api;
 //! # extern crate ruma_identifiers;
 //! # #[macro_use]
@@ -27,61 +25,69 @@
 //!
 //!     /// This API endpoint's body parameters.
 //!     #[derive(Clone, Debug, Deserialize, Serialize)]
-//!     pub struct BodyParams {
+//!     pub struct RequestBody {
 //!         pub room_id: RoomId,
 //!     }
 //!
 //!     /// This API endpoint's path parameters.
 //!     #[derive(Clone, Debug)]
-//!     pub struct PathParams {
+//!     pub struct RequestPathParams {
 //!         pub room_alias: RoomAliasId,
+//!     }
+//!
+//!     #[derive(Clone, Debug)]
+//!     pub enum ResponseStatus {
+//!         AlreadyExists,
+//!         Created,
 //!     }
 //!
 //!     /// Details about this API endpoint.
 //!     pub struct Endpoint;
 //!
-//!     impl ruma_api::Endpoint for Endpoint {
-//!         type BodyParams = BodyParams;
-//!         type PathParams = PathParams;
-//!         type QueryParams = ();
-//!         type Response = ();
+//!     impl From<ResponseStatus> for u16 {
+//!         fn from(response_status: ResponseStatus) -> Self {
+//!             match response_status {
+//!                 AlreadyExists => 409,
+//!                 Created => 200,
+//!             }
+//!         }
+//!     }
 //!
-//!         fn method() -> ruma_api::Method {
-//!             ruma_api::Method::Put
+//!     impl<'a> ruma_api::Endpoint<'a> for Endpoint {
+//!         type RequestBody = RequestBody;
+//!         type RequestHeaders = ruma_api::Unused;
+//!         type RequestPathParams = RequestPathParams;
+//!         type RequestQueryParams = ruma_api::Unused;
+//!         type ResponseBody = ruma_api::Unused;
+//!         type ResponseHeaders = ruma_api::Unused;
+//!         type ResponseStatus = ResponseStatus;
+//!
+//!         fn info() -> ruma_api::Info {
+//!             ruma_api::Info {
+//!                 description: "Matrix implementation of room directory.",
+//!                 request_method: ruma_api::Method::Put,
+//!                 name: "room_directory",
+//!                 router_path: "/_matrix/client/r0/directory/room/:room_alias",
+//!                 requires_authentication: true,
+//!                 rate_limited: false,
+//!             }
 //!         }
 //!
-//!         fn request_path(params: Self::PathParams) -> String {
+//!         fn request_path(params: Self::RequestPathParams) -> String {
 //!             format!("/_matrix/client/r0/directory/room/{}", params.room_alias)
-//!         }
-//!
-//!         fn router_path() -> &'static str {
-//!             "/_matrix/client/r0/directory/room/:room_alias"
-//!         }
-//!
-//!         fn name() -> &'static str {
-//!             "room_directory"
-//!         }
-//!
-//!         fn description() -> &'static str {
-//!             "Matrix implementation of room directory."
-//!         }
-//!
-//!         fn requires_authentication() -> bool {
-//!             true
-//!         }
-//!
-//!         fn rate_limited() -> bool {
-//!             false
 //!         }
 //!     }
 //! }
 //! # }
 
+#![feature(never_type, try_from)]
 #![deny(missing_docs)]
 
 extern crate serde;
 
-use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
+
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// HTTP request methods used in Matrix APIs.
 #[derive(Clone, Copy, Debug)]
@@ -97,38 +103,105 @@ pub enum Method {
 }
 
 /// An API endpoint.
-pub trait Endpoint {
+pub trait Endpoint<'a> {
     /// Request parameters supplied via the body of the HTTP request.
-    type BodyParams: Deserialize + Serialize;
+    type RequestBody: Deserialize + Serialize;
+
+    /// Request parameters supplied via HTTP header.
+    type RequestHeaders: Into<Vec<u8>>;
 
     /// Request parameters supplied via the URL's path.
-    type PathParams;
+    type RequestPathParams;
 
-    /// Parameters supplied via the URL's query string.
-    type QueryParams: Deserialize + Serialize;
+    /// Request parameters supplied via the URL's query string.
+    type RequestQueryParams: Into<Vec<(&'a str, &'a str)>>;
 
-    /// The body of the response.
-    type Response: Deserialize + Serialize;
+    /// The body of the HTTP response.
+    type ResponseBody: Deserialize + Serialize;
 
-    /// Returns the HTTP method used by this endpoint.
-    fn method() -> Method;
+    /// Possible HTTP response headers.
+    type ResponseHeaders: TryFrom<&'a [u8]>;
+
+    /// Possible HTTP response codes.
+    type ResponseStatus: Into<u16>;
+
+    /// Information about the endpoint.
+    fn info() -> Info;
 
     /// Generates the path component of the URL for this endpoint using the supplied parameters.
-    fn request_path(params: Self::PathParams) -> String;
+    fn request_path(params: Self::RequestPathParams) -> String;
+}
 
-    /// Generates a generic path component of the URL for this endpoint, suitable for `Router` from
-    /// the router crate.
-    fn router_path() -> &'static str;
-
-    /// A unique identifier for this endpoint, suitable for `Router` from the router crate.
-    fn name() -> &'static str;
-
+/// Information about an `Endpoint`.
+pub struct Info {
     /// A human-readable description of the endpoint.
-    fn description() -> &'static str;
+    pub description: &'static str,
+    /// A unique identifier for this endpoint.
+    pub name: &'static str,
+    /// Whether or not this endpoint is rate limited by the server.
+    pub rate_limited: bool,
+    /// The HTTP method used by this endpoint.
+    pub request_method: Method,
+    /// Whether or not the server requires an authenticated user for this endpoint.
+    pub requires_authentication: bool,
+    /// The path of this endpoint's URL, with variable names where path parameters should be filled
+    /// in during a request.
+    ///
+    /// This value is suitable for creating routes with `Router` from the router crate.
+    pub router_path: &'static str,
+}
 
-    /// Whether or not this endpoint requires an authenticated user.
-    fn requires_authentication() -> bool;
+/// Used to indicate that an associated type is not applicable for a particular `Endpoint`.
+pub struct Unused;
 
-    /// Whether or not this endpoint is rate limited.
-    fn rate_limited() -> bool;
+impl<'a> TryFrom<&'a [u8]> for Unused {
+    type Err = !;
+
+    fn try_from(_slice: &[u8]) -> Result<Self, Self::Err> {
+        Ok(Unused)
+    }
+}
+
+impl<'a> From<Unused> for Vec<(&'a str, &'a str)> {
+    fn from(_unused: Unused) -> Self {
+        Vec::new()
+    }
+}
+
+impl From<Unused> for Vec<u8> {
+    fn from(_unused: Unused) -> Self {
+        Vec::new()
+    }
+}
+
+impl Deserialize for Unused {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Unused, D::Error> where D: Deserializer {
+        struct Visitor;
+        impl ::serde::de::Visitor for Visitor {
+            type Value = Unused;
+            #[inline]
+            fn visit_seq<V>(&mut self, mut visitor: V) -> Result<Unused, V::Error>
+                where V: ::serde::de::SeqVisitor
+            {
+                visitor.end()?;
+                Ok(Unused{})
+            }
+            #[inline]
+            fn visit_map<V>(&mut self, mut visitor: V) -> Result<Unused, V::Error>
+                where V: ::serde::de::MapVisitor
+            {
+                visitor.end()?;
+                Ok(Unused{})
+            }
+        }
+        const FIELDS: &'static [&'static str] = &[];
+        deserializer.deserialize_struct("Unused", FIELDS, Visitor)
+    }
+}
+
+impl Serialize for Unused {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+        let state = serializer.serialize_struct("Unused", 0)?;
+        serializer.serialize_struct_end(state)
+    }
 }
