@@ -40,6 +40,12 @@
 //!     /// Details about this API endpoint.
 //!     pub struct Endpoint;
 //!
+//!     impl ruma_api::PathParams for PathParams {
+//!         fn request_path(&self) -> String {
+//!             format!("/_matrix/client/r0/directory/room/{}", self.room_alias)
+//!         }
+//!     }
+//!
 //!     impl ruma_api::Endpoint for Endpoint {
 //!         type Request = Request;
 //!         type Response = ruma_api::response::StatusOnly;
@@ -112,16 +118,23 @@ pub trait Request {}
 /// An endpoint's response.
 pub trait Response {}
 
+/// Parameters that are included within the path component of the URL for an endpoint.
+pub trait PathParams {
+    /// Generates the path component of the URL for this endpoint using the supplied parameters.
+    fn request_path(&self) -> String;
+}
+
 /// Implementations of the `Request` trait covering various combinations of required components
 /// among request body, headers, path parameters, and query parameters.
 pub mod request {
     use serde::{Deserialize, Serialize};
 
-    use super::Request;
+    use super::{PathParams, Request};
 
     /// A request with a body, headers, path parameters, and query parameters.
     #[derive(Debug)]
-    pub struct All<B, H, P, Q> where B: Deserialize + Serialize, Q: Deserialize + Serialize {
+    pub struct All<B, H, P, Q>
+    where B: Deserialize + Serialize, P: PathParams, Q: Deserialize + Serialize {
         /// The request's body.
         pub body: B,
         /// The request's headers.
@@ -148,7 +161,7 @@ pub mod request {
 
     /// A request with only path parameters.
     #[derive(Debug)]
-    pub struct PathParamsOnly<P> {
+    pub struct PathParamsOnly<P> where P: PathParams {
         /// The request's path parameters.
         pub path_params: P,
     }
@@ -162,7 +175,7 @@ pub mod request {
 
     /// A request with no body.
     #[derive(Debug)]
-    pub struct NoBody<H, P, Q> where Q: Deserialize + Serialize {
+    pub struct NoBody<H, P, Q> where P: PathParams, Q: Deserialize + Serialize {
         /// The request's headers.
         pub headers: H,
         /// The request's path parameters.
@@ -173,7 +186,8 @@ pub mod request {
 
     /// A request with no headers.
     #[derive(Debug)]
-    pub struct NoHeaders<B, P, Q> where B: Deserialize + Serialize, Q: Deserialize + Serialize {
+    pub struct NoHeaders<B, P, Q>
+    where B: Deserialize + Serialize, P: PathParams, Q: Deserialize + Serialize {
         /// The request's body.
         pub body: B,
         /// The request's path parameters.
@@ -195,7 +209,7 @@ pub mod request {
 
     /// A request with no query parameters.
     #[derive(Debug)]
-    pub struct NoQueryParams<B, H, P> where B: Deserialize + Serialize {
+    pub struct NoQueryParams<B, H, P> where B: Deserialize + Serialize, P: PathParams {
         /// The request's body.
         pub body: B,
         /// The request's headers.
@@ -215,7 +229,7 @@ pub mod request {
 
     /// A request with only a body and path parameters.
     #[derive(Debug)]
-    pub struct BodyAndPathParams<B, P> where B: Deserialize + Serialize {
+    pub struct BodyAndPathParams<B, P> where B: Deserialize + Serialize, P: PathParams {
         /// The request's body.
         pub body: B,
         /// The request's path parameters.
@@ -234,7 +248,7 @@ pub mod request {
 
     /// A request with only headers and path parameters.
     #[derive(Debug)]
-    pub struct HeadersAndPathParams<H, P> {
+    pub struct HeadersAndPathParams<H, P> where P: PathParams {
         /// The request's headers.
         pub headers: H,
         /// The request's path parameters.
@@ -252,28 +266,35 @@ pub mod request {
 
     /// A request with only path parameters and query parameters.
     #[derive(Debug)]
-    pub struct PathParamsAndQueryParams<P, Q> where Q: Deserialize + Serialize {
+    pub struct PathParamsAndQueryParams<P, Q> where P: PathParams, Q: Deserialize + Serialize {
         /// The request's path parameters.
         pub path_params: P,
         /// The request's query parameters.
         pub query_params: Q,
     }
 
-    impl<B, H, P, Q> Request for All<B, H, P, Q> where B: Deserialize + Serialize, Q: Deserialize + Serialize {}
+    impl<B, H, P, Q> Request for All<B, H, P, Q>
+    where B: Deserialize + Serialize, P: PathParams, Q: Deserialize + Serialize {}
     impl<B> Request for BodyOnly<B> where B: Deserialize + Serialize {}
     impl<H> Request for HeadersOnly<H> {}
-    impl<P> Request for PathParamsOnly<P> {}
+    impl<P> Request for PathParamsOnly<P> where P: PathParams {}
     impl<Q> Request for QueryParamsOnly<Q> where Q: Deserialize + Serialize {}
-    impl<H, P, Q> Request for NoBody<H, P, Q> where Q: Deserialize + Serialize {}
-    impl<B, P, Q> Request for NoHeaders<B, P, Q> where B: Deserialize + Serialize, Q: Deserialize + Serialize {}
-    impl<B, H, Q> Request for NoPathParams<B, H, Q> where B: Deserialize + Serialize, Q: Deserialize + Serialize {}
-    impl<B, H, P> Request for NoQueryParams<B, H, P> where B: Deserialize + Serialize {}
+    impl<H, P, Q> Request for NoBody<H, P, Q> where P: PathParams, Q: Deserialize + Serialize {}
+    impl<B, P, Q> Request for NoHeaders<B, P, Q>
+    where B: Deserialize + Serialize, P: PathParams, Q: Deserialize + Serialize {}
+    impl<B, H, Q> Request for NoPathParams<B, H, Q>
+    where B: Deserialize + Serialize, Q: Deserialize + Serialize {}
+    impl<B, H, P> Request for NoQueryParams<B, H, P>
+    where B: Deserialize + Serialize, P: PathParams {}
     impl<B, H> Request for BodyAndHeaders<B, H> where B: Deserialize + Serialize {}
-    impl<B, P> Request for BodyAndPathParams<B, P> where B: Deserialize + Serialize {}
-    impl<B, Q> Request for BodyAndQueryParams<B, Q> where B: Deserialize + Serialize, Q: Deserialize + Serialize {}
-    impl<H, P> Request for HeadersAndPathParams<H, P> {}
+    impl<B, P> Request for BodyAndPathParams<B, P>
+    where B: Deserialize + Serialize, P: PathParams {}
+    impl<B, Q> Request for BodyAndQueryParams<B, Q>
+    where B: Deserialize + Serialize, Q: Deserialize + Serialize {}
+    impl<H, P> Request for HeadersAndPathParams<H, P> where P: PathParams {}
     impl<H, Q> Request for HeadersAndQueryParams<H, Q> where Q: Deserialize + Serialize {}
-    impl<P, Q> Request for PathParamsAndQueryParams<P, Q> where Q: Deserialize + Serialize {}
+    impl<P, Q> Request for PathParamsAndQueryParams<P, Q>
+    where P: PathParams, Q: Deserialize + Serialize {}
 }
 
 /// Implementations of the `Response` trait covering various combinations of required components
