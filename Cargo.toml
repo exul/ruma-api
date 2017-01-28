@@ -11,8 +11,9 @@ repository = "https://github.com/ruma/ruma-api"
 version = "0.3.0"
 
 [dependencies]
-serde = "0.8.21"
 
 [dev-dependencies]
-ruma-identifiers = "0.6.0"
-serde_derive = "0.8.21"
+ruma-identifiers = "0.7"
+serde = "0.9"
+serde_derive = "0.9"
+serde_json = "0.9"
