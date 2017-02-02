@@ -20,40 +20,54 @@
 //! pub mod create {
 //!     use std::convert::TryFrom;
 //!
-//!     use ruma_api::{self, Info, Method};
-//!     use ruma_identifiers::{RoomAliasId, RoomId};
-//!     use serde_json::to_vec;
+//!     use ruma_api::{self, Endpoint as ApiEndpoint, Info, Method};
+//!     use ruma_identifiers::{Error as RumaIdentifiersError, RoomAliasId, RoomId};
+//!     use serde_json::{Error as SerdeJsonError, from_slice, to_vec};
 //!
 //!     /// Endpoint for adding an alias to a room.
 //!     pub struct Endpoint;
 //!
+//!     /// An error when converting between `Request`/`Response` and
+//!     /// `ruma_api::Request`/`ruma_api::Response`.
+//!     pub enum Error {
+//!         /// An error when converting into a Matrix identifier.
+//!         RumaIdentifiers(RumaIdentifiersError),
+//!         /// An error when converting from JSON.
+//!         SerdeJson(SerdeJsonError),
+//!     }
+//!
 //!     /// Input parameters for a request to this endpoint.
 //!     pub struct Request {
+//!         /// The room alias to create.
 //!         pub room_alias: RoomAliasId,
+//!         /// The ID of the room being aliased.
 //!         pub room_id: RoomId,
 //!     }
 //!
-//!     #[derive(Serialize)]
+//!     #[derive(Deserialize, Serialize)]
 //!     struct RequestBody {
+//!         /// The ID of the room being aliased.
 //!         pub room_id: RoomId,
 //!     }
 //!
 //!     /// The response from this endpoint.
 //!     pub struct Response;
 //!
+//!     static INFO: Info = Info {
+//!         description: "Add an alias to a room.",
+//!         name: "create_alias",
+//!         rate_limited: false,
+//!         request_method: Method::Put,
+//!         requires_authentication: true,
+//!         router_path: "/_matrix/client/r0/directory/room/:room_alias",
+//!     };
+//!
 //!     impl ruma_api::Endpoint for Endpoint {
 //!         type Request = Request;
 //!         type Response = Response;
 //!
 //!         fn info() -> &'static Info {
-//!             &Info {
-//!                 description: "Add an alias to a room.",
-//!                 name: "create_alias",
-//!                 rate_limited: false,
-//!                 request_method: Method::Put,
-//!                 requires_authentication: true,
-//!                 router_path: "/_matrix/client/r0/directory/room/:room_alias",
-//!             }
+//!             &INFO
 //!         }
 //!     }
 //!
@@ -74,15 +88,47 @@
 //!     }
 //!
 //!     impl TryFrom<ruma_api::Request> for Request {
-//!         // TODO
+//!         type Err = Error;
+//!
+//!         fn try_from(request: ruma_api::Request) -> Result<Self, Self::Err> {
+//!             let parts: Vec<&str> = request.path.split('/').collect();
+//!             let request_body: RequestBody = from_slice(&request.body)?;
+//!
+//!             Ok(Request {
+//!                 room_alias: RoomAliasId::try_from(parts[6])?,
+//!                 room_id: request_body.room_id,
+//!             })
+//!         }
 //!     }
 //!
 //!     impl Into<ruma_api::Response> for Response {
-//!         Response
+//!         fn into(self) -> ruma_api::Response {
+//!             ruma_api::Response {
+//!                 body: Vec::new(),
+//!                 headers: Vec::new(),
+//!                 status: 200,
+//!             }
+//!         }
 //!     }
 //!
 //!     impl TryFrom<ruma_api::Response> for Response {
-//!         // TODO
+//!         type Err = Error;
+//!
+//!         fn try_from(_: ruma_api::Response) -> Result<Self, Self::Err> {
+//!             Ok(Response)
+//!         }
+//!     }
+//!
+//!     impl From<SerdeJsonError> for Error {
+//!         fn from(error: SerdeJsonError) -> Self {
+//!             Error::SerdeJson(error)
+//!         }
+//!     }
+//!
+//!     impl From<RumaIdentifiersError> for Error {
+//!         fn from(error: RumaIdentifiersError) -> Self {
+//!             Error::RumaIdentifiers(error)
+//!         }
 //!     }
 //! }
 //! # }
