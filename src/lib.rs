@@ -1,7 +1,7 @@
 //! Crate ruma_api contains core types used to define the requests and responses for each endpoint
 //! in the various [Matrix](https://matrix.org) API specifications.
 //! These types can be shared by client and server code for all Matrix APIs.
-//!  When implementing a new Matrix API, each endpoint should have a type that implements `Endpoint`,
+//! When implementing a new Matrix API, each endpoint should have a type that implements `Endpoint`,
 //! plus the associated `Request` and `Response` types.
 //!
 //! # Example
@@ -53,21 +53,19 @@
 //!     /// The response from this endpoint.
 //!     pub struct Response;
 //!
-//!     static INFO: Info = Info {
-//!         description: "Add an alias to a room.",
-//!         name: "create_alias",
-//!         rate_limited: false,
-//!         request_method: Method::Put,
-//!         requires_authentication: true,
-//!         router_path: "/_matrix/client/r0/directory/room/:room_alias",
-//!     };
-//!
 //!     impl ruma_api::Endpoint for Endpoint {
 //!         type Request = Request;
 //!         type Response = Response;
 //!
-//!         fn info() -> &'static Info {
-//!             &INFO
+//!         fn info() -> Info {
+//!             Info {
+//!                 description: "Add an alias to a room.",
+//!                 name: "create_alias",
+//!                 rate_limited: false,
+//!                 request_method: Method::Put,
+//!                 requires_authentication: true,
+//!                 router_path: "/_matrix/client/r0/directory/room/:room_alias",
+//!             }
 //!         }
 //!     }
 //!
@@ -181,7 +179,7 @@ pub trait Endpoint {
     type Response: Into<Response> + TryFrom<Response>;
 
     /// General information about the endpoint.
-    fn info() -> &'static Info;
+    fn info() -> Info;
 }
 
 /// An HTTP request.
