@@ -13,7 +13,7 @@ version = "0.3.0"
 [dependencies]
 
 [dev-dependencies]
-ruma-identifiers = "0.7"
+ruma-identifiers = "0.8"
 serde = "0.9"
 serde_derive = "0.9"
 serde_json = "0.9"
