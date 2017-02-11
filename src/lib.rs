@@ -80,7 +80,7 @@
 //!                 headers: Vec::new(),
 //!                 method: Endpoint::info().request_method,
 //!                 path: format!("/_matrix/client/r0/directory/room/{}", self.room_alias),
-//!                 query: Vec::new(),
+//!                 query: None,
 //!             }
 //!         }
 //!     }
@@ -201,7 +201,7 @@ pub struct Request {
     /// The path component of the request's URL.
     pub path: String,
     /// The query string component of the request's URL.
-    pub query: Vec<(String, String)>
+    pub query: Option<String>,
 }
 
 /// An HTTP response.
