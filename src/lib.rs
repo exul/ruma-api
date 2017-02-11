@@ -76,8 +76,8 @@
 //!             };
 //!
 //!             ruma_api::Request {
-//!                 body: to_vec(&request_body).expect("request body should serialize"),
-//!                 headers: Vec::new(),
+//!                 body: Some(to_vec(&request_body).expect("request body should serialize")),
+//!                 headers: None,
 //!                 method: Endpoint::info().request_method,
 //!                 path: format!("/_matrix/client/r0/directory/room/{}", self.room_alias),
 //!                 query: None,
@@ -90,7 +90,9 @@
 //!
 //!         fn try_from(request: ruma_api::Request) -> Result<Self, Self::Err> {
 //!             let parts: Vec<&str> = request.path.split('/').collect();
-//!             let request_body: RequestBody = from_slice(&request.body)?;
+//!             let request_body: RequestBody = from_slice(
+//!                 &request.body.expect("body should be present")
+//!             )?;
 //!
 //!             Ok(Request {
 //!                 room_alias: RoomAliasId::try_from(parts[6])?,
@@ -101,11 +103,7 @@
 //!
 //!     impl Into<ruma_api::Response> for Response {
 //!         fn into(self) -> ruma_api::Response {
-//!             ruma_api::Response {
-//!                 body: Vec::new(),
-//!                 headers: Vec::new(),
-//!                 status: 200,
-//!             }
+//!             ruma_api::Response::default()
 //!         }
 //!     }
 //!
@@ -193,9 +191,9 @@ pub trait Endpoint {
 #[derive(Clone, Debug)]
 pub struct Request {
     /// The request body.
-    pub body: Vec<u8>,
+    pub body: Option<Vec<u8>>,
     /// The HTTP request headers.
-    pub headers: Vec<(String, Vec<u8>)>,
+    pub headers: Option<Vec<(String, Vec<u8>)>>,
     /// The HTTP request method.
     pub method: Method,
     /// The path component of the request's URL.
@@ -215,9 +213,20 @@ pub struct Request {
 #[derive(Clone, Debug)]
 pub struct Response {
     /// The request body.
-    pub body: Vec<u8>,
+    pub body: Option<Vec<u8>>,
     /// The HTTP request headers.
-    pub headers: Vec<(String, Vec<u8>)>,
+    pub headers: Option<Vec<(String, Vec<u8>)>>,
     /// The HTTP status code.
     pub status: u16,
+}
+
+impl Default for Response {
+    /// Returns a `Response` with status code 200, but no body or headers.
+    fn default() -> Self {
+        Response {
+            body: None,
+            headers: None,
+            status: 200,
+        }
+    }
 }
