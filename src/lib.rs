@@ -195,7 +195,7 @@ pub struct Request {
     /// The request body.
     pub body: Vec<u8>,
     /// The HTTP request headers.
-    pub headers: Vec<(Vec<u8>, Vec<u8>)>,
+    pub headers: Vec<(String, Vec<u8>)>,
     /// The HTTP request method.
     pub method: Method,
     /// The path component of the request's URL.
@@ -217,7 +217,7 @@ pub struct Response {
     /// The request body.
     pub body: Vec<u8>,
     /// The HTTP request headers.
-    pub headers: Vec<(Vec<u8>, Vec<u8>)>,
+    pub headers: Vec<(String, Vec<u8>)>,
     /// The HTTP status code.
     pub status: u16,
 }
