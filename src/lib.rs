@@ -8,11 +8,10 @@
 //!
 //! ```rust,no_run
 //! # #![feature(try_from)]
-//! # extern crate ruma_api;
+//! # #[macro_use] extern crate ruma_api;
 //! # extern crate ruma_identifiers;
 //! # extern crate serde;
-//! # #[macro_use]
-//! # extern crate serde_derive;
+//! # #[macro_use] extern crate serde_derive;
 //! # extern crate serde_json;
 //! #
 //! # fn main() {
@@ -24,8 +23,19 @@
 //!     use ruma_identifiers::{Error as RumaIdentifiersError, RoomAliasId, RoomId};
 //!     use serde_json::{Error as SerdeJsonError, from_slice, to_vec};
 //!
-//!     /// Endpoint for adding an alias to a room.
-//!     pub struct Endpoint;
+//!     // This macro defines a public type `Endpoint` and implements `ruma_api::Endpoint`
+//!     // for it with the provided details.
+//!     endpoint! {
+//!         type Request = Request;
+//!         type Response = Response;
+//!
+//!         description: "Add an alias to a room.",
+//!         name: "create_alias",
+//!         rate_limited: false,
+//!         request_method: Put,
+//!         requires_authentication: true,
+//!         router_path: "/_matrix/client/r0/directory/room/:room_alias"
+//!     }
 //!
 //!     /// An error when converting between `Request`/`Response` and
 //!     /// `ruma_api::Request`/`ruma_api::Response`.
@@ -52,22 +62,6 @@
 //!
 //!     /// The response from this endpoint.
 //!     pub struct Response;
-//!
-//!     impl ruma_api::Endpoint for Endpoint {
-//!         type Request = Request;
-//!         type Response = Response;
-//!
-//!         fn info() -> Info {
-//!             Info {
-//!                 description: "Add an alias to a room.",
-//!                 name: "create_alias",
-//!                 rate_limited: false,
-//!                 request_method: Method::Put,
-//!                 requires_authentication: true,
-//!                 router_path: "/_matrix/client/r0/directory/room/:room_alias",
-//!             }
-//!         }
-//!     }
 //!
 //!     impl Into<ruma_api::Request> for Request {
 //!         fn into(self) -> ruma_api::Request {
@@ -134,6 +128,8 @@
 #![deny(missing_docs)]
 
 use std::convert::TryFrom;
+
+mod macros;
 
 /// Information about an `Endpoint`.
 #[derive(Clone, Copy, Debug)]
