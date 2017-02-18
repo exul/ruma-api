@@ -24,11 +24,9 @@
 //!     use serde_json::{Error as SerdeJsonError, from_slice, to_vec};
 //!
 //!     // This macro defines a public type `Endpoint` and implements `ruma_api::Endpoint`
-//!     // for it with the provided details.
+//!     // for it with the provided details. It expects types named `Request` and `Response` in the
+//!     // local scope to use for the associated types of the same name.
 //!     endpoint! {
-//!         type Request = Request;
-//!         type Response = Response;
-//!
 //!         description: "Add an alias to a room.",
 //!         name: "create_alias",
 //!         rate_limited: false,

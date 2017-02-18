@@ -2,9 +2,6 @@
 #[macro_export]
 macro_rules! endpoint {
     (
-        type Request = $request:ty;
-        type Response = $response:ty;
-
         description: $description:expr,
         name: $name:expr,
         rate_limited: $rate_limited:expr,
@@ -17,8 +14,8 @@ macro_rules! endpoint {
         pub struct Endpoint;
 
         impl $crate::Endpoint for Endpoint {
-            type Request = $request;
-            type Response = $response;
+            type Request = Request;
+            type Response = Response;
 
             fn info() -> $crate::Info {
                 $crate::Info {
