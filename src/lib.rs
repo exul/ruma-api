@@ -150,7 +150,7 @@ pub struct Info {
 }
 
 /// HTTP request methods used in Matrix APIs.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Method {
     /// DELETE
     Delete,
