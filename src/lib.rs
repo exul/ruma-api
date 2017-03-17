@@ -97,18 +97,18 @@ pub enum Method {
 }
 
 /// An API endpoint.
-pub trait Endpoint {
+pub trait Endpoint<'de> {
     /// Request parameters supplied via the body of the HTTP request.
-    type BodyParams: Deserialize + Serialize;
+    type BodyParams: Deserialize<'de> + Serialize;
 
     /// Request parameters supplied via the URL's path.
     type PathParams;
 
     /// Parameters supplied via the URL's query string.
-    type QueryParams: Deserialize + Serialize;
+    type QueryParams: Deserialize<'de> + Serialize;
 
     /// The body of the response.
-    type Response: Deserialize + Serialize;
+    type Response: Deserialize<'de> + Serialize;
 
     /// Returns the HTTP method used by this endpoint.
     fn method() -> Method;
